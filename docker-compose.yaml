@@ -9,6 +9,6 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    container_name: teslodb-files
+    container_name: teslodb-auth
     volumes:
       - ./postgre:/var/lib/postgresql/data

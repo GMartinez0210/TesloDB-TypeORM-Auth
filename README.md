@@ -6,7 +6,7 @@
 
 1.- Clone this repository using the following git command 
 ```
-git clone https://github.com/GMartinez0210/TesloDB-TypeORM-Files.git
+git clone https://github.com/GMartinez0210/TesloDB-TypeORM-Auth.git
 ```
 
 2.- Install the all dependencies.
