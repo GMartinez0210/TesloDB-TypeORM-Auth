@@ -23,6 +23,34 @@ export class FilesController {
     private readonly filesService: FilesService,
   ) {}
 
+  @Get(':imageName')
+  findOneImage(@Res() res: Response, @Param('imageName') imageName: string) {
+    const image = this.filesService.findOneImage(imageName);
+    res.status(200).sendFile(image);
+  }
+
+  @Post()
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter,
+      limits: { fieldSize: 5000 },
+      storage: diskStorage({
+        destination: './static/products/',
+        filename: fileNamer,
+      }),
+    }),
+  )
+  async createOneImage(@UploadedFile('file') file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('The file has a not valid extension');
+    }
+
+    const hostApi =
+      this.configService.get('HOST_API') || 'http://localhost:3000/api';
+    const secureUrl = `${hostApi}/files/${file.filename}`;
+    return { secureUrl };
+  }
+
   @Get('product/:imageName')
   findOneProductImage(
     @Res() res: Response,
@@ -38,12 +66,12 @@ export class FilesController {
       fileFilter,
       limits: { fieldSize: 5000 },
       storage: diskStorage({
-        destination: './static/uploads/',
+        destination: './static/products/',
         filename: fileNamer,
       }),
     }),
   )
-  async create(@UploadedFile('file') file: Express.Multer.File) {
+  async createOneProductImage(@UploadedFile('file') file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('The file has a not valid extension');
     }
