@@ -1,9 +1,8 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'src/products/entities';
+import { ProductsService } from 'src/products/products.service';
 
-import { DataSource, InsertResult, QueryRunner, Repository } from 'typeorm';
-import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { DataSource, QueryRunner } from 'typeorm';
 
 import { initialData } from './data/seed-product.data';
 import { ISeedRestoreResponse } from './interfaces/response.interface';
@@ -12,12 +11,10 @@ import { ISeedRestoreResponse } from './interfaces/response.interface';
 export class SeedService {
   constructor(
     private readonly dataSource: DataSource,
-
-    @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>,
+    private readonly productService: ProductsService,
   ) {}
 
-  async restore() {
+  async restore(): Promise<ISeedRestoreResponse> {
     const response: ISeedRestoreResponse = {} as ISeedRestoreResponse;
 
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
@@ -25,9 +22,9 @@ export class SeedService {
     await queryRunner.startTransaction();
 
     try {
-      const productsInsertResult = await this.productRestore();
+      const productsInsertResult: Product[] = await this.productRestore();
 
-      response.product = productsInsertResult.generatedMaps.length;
+      response.product = productsInsertResult.length;
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
@@ -42,14 +39,9 @@ export class SeedService {
     return response;
   }
 
-  private async productRestore(): Promise<InsertResult> {
-    await this.productRepository.delete({});
-
-    const products = initialData.products as QueryDeepPartialEntity<Product>[];
-    const insertResult: InsertResult = await this.productRepository.insert(
-      products,
-    );
-
-    return insertResult;
+  private async productRestore(): Promise<Product[]> {
+    const { products } = initialData;
+    const productsRestored = this.productService.restore(products);
+    return productsRestored;
   }
 }

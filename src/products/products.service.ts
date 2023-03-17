@@ -232,13 +232,17 @@ export class ProductsService {
     }
   }
 
-  async removeAll(): Promise<void> {
-    const queryBuilder: SelectQueryBuilder<Product> =
-      this.productRepository.createQueryBuilder('product');
-    queryBuilder.where({});
-    queryBuilder.delete();
+  async restore(createProductsDto: CreateProductDto[]): Promise<Product[]> {
+    await this.productRepository.delete({});
 
-    await queryBuilder.execute();
+    const products: Product[] = [];
+
+    for (const createProductDto of createProductsDto) {
+      const product = await this.createOne(createProductDto);
+      products.push(product);
+    }
+
+    return products;
   }
 
   private async getNewProductImages(
