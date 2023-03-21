@@ -4,69 +4,88 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 
 import { DeepPartial, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { User } from './entities/user.entity';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { User } from '../users/entities/user.entity';
 import { LoginUserDto } from './dto/login-user.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userService: UsersService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async register(createUserDto: CreateUserDto): Promise<User> {
+  async register(registerUserDto: RegisterUserDto) {
     try {
-      const { password, ...speadCreateUserDto } = createUserDto;
+      const user: User = await this.userService.createOne(registerUserDto);
+      const jwtPayload: JwtPayload = { id: user.id };
+      const token = this.getJwtToken(jwtPayload);
 
-      const passwordHashed = bcrypt.hashSync(password, 10);
-
-      const userInstance: DeepPartial<User> = {
-        ...speadCreateUserDto,
-        password: passwordHashed,
+      return {
+        ...user,
+        token,
       };
-
-      const user: User = await this.userRepository.create(userInstance);
-      await this.userRepository.save(user);
-
-      return user;
     } catch (error) {
       console.log('Error | register | auth service');
       throw new InternalServerErrorException({ error });
     }
   }
 
-  async login(loginUserDto: LoginUserDto): Promise<User> {
+  async login(loginUserDto: LoginUserDto) {
     try {
       const { password, email } = loginUserDto;
 
-      const userFound = await this.userRepository.findOne({
-        where: { email },
+      const user = await this.userService.findOne({
+        email,
       });
 
-      if (!userFound) {
-        throw new UnauthorizedException(
-          `No user with the email given: ${email}`,
-        );
-      }
+      this.comparePasswords(password, user.password);
 
-      const isCorrectPassword = bcrypt.compareSync(
-        password,
-        userFound.password,
-      );
+      delete user.password;
 
-      if (!isCorrectPassword) {
-        throw new UnauthorizedException('The password given is not correct');
-      }
+      const jwtPayload: JwtPayload = { id: user.id };
 
-      return userFound;
+      const token = this.getJwtToken(jwtPayload);
+
+      return {
+        ...user,
+        token,
+      };
     } catch (error) {
       console.log('Error | login | auth service');
       throw new InternalServerErrorException({ error });
     }
+  }
+
+  check(user: User) {
+    delete user.password;
+
+    const jwtPayload: JwtPayload = { id: user.id };
+
+    const token = this.getJwtToken(jwtPayload);
+    return {
+      ...user,
+      token,
+    };
+  }
+
+  private comparePasswords(passwordLogin, passwordUser) {
+    const isCorrectPassword = bcrypt.compareSync(passwordLogin, passwordUser);
+
+    if (!isCorrectPassword) {
+      throw new UnauthorizedException('The password given is not correct');
+    }
+  }
+
+  private getJwtToken(payload: JwtPayload) {
+    const token = this.jwtService.sign(payload);
+    return token;
   }
 }

@@ -1,3 +1,4 @@
 export interface ISeedRestoreResponse {
-  product: number;
+  products: number;
+  users: number;
 }

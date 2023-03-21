@@ -1,6 +1,26 @@
-import { SeedData } from '../interfaces/seed-product.interface';
+import { SeedData } from '../interfaces/seed-data.interface';
 
 export const initialData: SeedData = {
+  users: [
+    {
+      email: 'admin@email.com',
+      password: 'Admin123',
+      fullName: 'Admin',
+      roles: ['admin'],
+    },
+    {
+      email: 'super-user@email.com',
+      password: 'SuperUser123',
+      fullName: 'Super User',
+      roles: ['super-user'],
+    },
+    {
+      email: 'user@email.com',
+      password: 'User123',
+      fullName: 'User',
+      roles: ['user'],
+    },
+  ],
   products: [
     {
       description:

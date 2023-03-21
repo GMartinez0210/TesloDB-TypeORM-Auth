@@ -1,8 +1,10 @@
+import { User } from 'src/users/entities/user.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -65,6 +67,11 @@ export class Product {
     cascade: true,
   })
   images: ProductImage[];
+
+  @ManyToOne(() => User, (user) => user.id, {
+    onDelete: 'CASCADE',
+  })
+  user: User;
 
   @BeforeInsert()
   @BeforeUpdate()

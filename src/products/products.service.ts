@@ -21,8 +21,12 @@ import { UpdateProductDto } from './dtos/update-product.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 
 import {
+  IParamsForCreateProduct,
+  IParamsForFindOneProduct,
   IParamsForGetNewProductImages,
   IParamsForGetProductImages,
+  IParamsForRestoreProducts,
+  IParamsForUpdateProduct,
 } from './interfaces/params.interface';
 
 @Injectable()
@@ -37,8 +41,9 @@ export class ProductsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async createOne(createProductDto: CreateProductDto): Promise<Product> {
+  async createOne(params: IParamsForCreateProduct): Promise<Product> {
     try {
+      const { createProductDto, user } = params;
       const { images: productImages } = createProductDto;
 
       const images: ProductImage[] = productImages.map((url) =>
@@ -48,6 +53,7 @@ export class ProductsService {
       const productInstance: DeepPartial<Product> = {
         ...createProductDto,
         images,
+        user,
       };
 
       const product: Product = this.productRepository.create(productInstance);
@@ -68,6 +74,7 @@ export class ProductsService {
         take,
         relations: {
           images: true,
+          user: true,
         },
       });
 
@@ -78,7 +85,7 @@ export class ProductsService {
     }
   }
 
-  async findOne(query: ObjectLiteral): Promise<Product> {
+  async findOne(query: IParamsForFindOneProduct): Promise<Product> {
     try {
       const queryBuilder: SelectQueryBuilder<Product> =
         this.productRepository.createQueryBuilder('product');
@@ -89,6 +96,7 @@ export class ProductsService {
         slug: query.slug.toUpperCase(),
       });
       queryBuilder.innerJoinAndSelect('product.images', 'images');
+      queryBuilder.innerJoinAndSelect('product.user', 'user');
 
       const product = await queryBuilder.getOne();
 
@@ -112,6 +120,7 @@ export class ProductsService {
         where: { id },
         relations: {
           images: true,
+          user: true,
         },
       });
 
@@ -128,11 +137,9 @@ export class ProductsService {
     }
   }
 
-  async updateOne(
-    id: string,
-    updateProductDto: UpdateProductDto,
-  ): Promise<Product> {
+  async updateOne(params: IParamsForUpdateProduct): Promise<Product> {
     try {
+      const { id, user, updateProductDto } = params;
       const { images: productImages, ...spreadUpdateProductDto } =
         updateProductDto;
 
@@ -170,6 +177,8 @@ export class ProductsService {
         product.images = productImages
           ? await this.getNewProductImages(paramsForGetNewProductImages)
           : await this.getProductImages(paramsForGetProductImages);
+
+        product.user = user;
 
         await queryRunner.manager.save(product);
         await queryRunner.commitTransaction();
@@ -232,13 +241,19 @@ export class ProductsService {
     }
   }
 
-  async restore(createProductsDto: CreateProductDto[]): Promise<Product[]> {
+  async restore(params: IParamsForRestoreProducts): Promise<Product[]> {
+    const { user, createProductsDto } = params;
+
     await this.productRepository.delete({});
 
     const products: Product[] = [];
 
     for (const createProductDto of createProductsDto) {
-      const product = await this.createOne(createProductDto);
+      const paramsForCreateProduct: IParamsForCreateProduct = {
+        user,
+        createProductDto,
+      };
+      const product = await this.createOne(paramsForCreateProduct);
       products.push(product);
     }
 
